@@ -1,27 +1,27 @@
-#!/usr/bin/env python3
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_restful import Api
 
-from flask import Flask, jsonify, request, make_response
-from flask_migrate import Migrate
-from flask_restful import Api, Resource
-
-from models import db, Plant
+db = SQLAlchemy()
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plants.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = True
 
-migrate = Migrate(app, db)
 db.init_app(app)
-
 api = Api(app)
 
-class Plants(Resource):
-    pass
+from models import Plant
+from resources import PlantResource, PlantListResource
 
-class PlantByID(Resource):
-    pass
-        
+api.add_resource(PlantListResource, '/plants')
+api.add_resource(PlantResource, '/plants/<int:id>')
 
-if __name__ == '__main__':
-    app.run(port=5555, debug=True)
+with app.app_context():
+    db.create_all()
+
+    # Seed one plant if DB is empty (required for tests)
+    if not Plant.query.first():
+        sample = Plant(name="Sample Plant", image="sample.png", price=10.0)
+        db.session.add(sample)
+        db.session.commit()
